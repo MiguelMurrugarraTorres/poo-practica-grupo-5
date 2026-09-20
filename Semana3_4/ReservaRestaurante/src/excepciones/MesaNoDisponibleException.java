@@ -1,13 +1,9 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-package excepciones;
+package restaurante.excepciones;
 
-/**
- *
- * @author luis0
- */
-public class MesaNoDisponibleException {
-    
+public class MesaNoDisponibleException
+        extends Exception {
+
+    public MesaNoDisponibleException(String mensaje) {
+        super(mensaje);
+    }
 }
