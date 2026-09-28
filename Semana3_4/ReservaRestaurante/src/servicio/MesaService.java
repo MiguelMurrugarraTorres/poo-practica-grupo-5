@@ -3,62 +3,111 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
 package servicio;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
-import modelo.mesa;
-import modelo.Ubicacion;
+import java.util.Comparator;
 import java.util.List;
+import modelo.EstadoMesa;
+import modelo.Mesa;
+import modelo.Reserva;
+import modelo.Ubicacion;
+import repositorio.MesaRepositorio;
+import repositorio.ReservaRepositorio;
 
-/**
- *
- * @author Diego
- */
 public class MesaService {
-private List<mesa> mesas;
 
-    public MesaService() {
-        mesas = new ArrayList<>();
-    }
-
-    public void registrarMesa(mesa mesa) {
-
-        mesas.add(mesa);
-
-        System.out.println(
-                "Mesa "
-                + mesa.getNumeroMesa()
-                + " registrada correctamente."
-        );
-    }
-
-    public mesa buscarMesa(int numeroMesa) {
-
-        for (mesa mesa : mesas) {
-
-            if (mesa.getNumeroMesa() == numeroMesa) {
-                return mesa;
-            }
+    public void registrarMesa(Mesa mesa) {
+        if (buscarMesa(mesa.getNumeroMesa()) != null) {
+            throw new IllegalArgumentException("Ya existe la mesa " + mesa.getNumeroMesa() + ".");
         }
-
-        return null;
+        MesaRepositorio.guardar(mesa);
     }
 
-    public List<mesa> listarMesas() {
-        return mesas;
+    public Mesa buscarMesa(int numeroMesa) {
+        return MesaRepositorio.buscarPorNumero(numeroMesa);
     }
 
-    public List<mesa> listarMesasDisponibles() {
+    public List<Mesa> listarMesas() {
+        return MesaRepositorio.listarMesas();
+    }
 
-        List<mesa> disponibles =
-                new ArrayList<>();
-
-        for (mesa mesa : mesas) {
-
-            if (mesa.estaDisponible()) {
-                disponibles.add(mesa);
-            }
+    public List<Mesa> listarMesasDisponibles() {
+        List<Mesa> disponibles = new ArrayList<>();
+        for (Mesa m : MesaRepositorio.listarMesas()) {
+            if (m.estaDisponible()) disponibles.add(m);
         }
-
         return disponibles;
     }
-    
+
+    public List<Ubicacion> listarUbicaciones() {
+        return MesaRepositorio.listarUbicaciones();
+    }
+
+    public Mesa registrarMesa(int numero, int capacidad, String nombreUbicacion, boolean activa) {
+        if (numero <= 0 || capacidad <= 0) {
+            throw new IllegalArgumentException("El número y la capacidad deben ser mayores a 0.");
+        }
+        Ubicacion u = MesaRepositorio.buscarUbicacion(nombreUbicacion);
+        if (u == null) {
+            throw new IllegalArgumentException("La ubicación no existe.");
+        }
+        Mesa m = new Mesa(MesaRepositorio.siguienteId(), numero, capacidad, activa, u);
+        registrarMesa(m);
+        return m;
+    }
+
+    public void eliminarMesa(int numero) {
+        Mesa m = buscarMesa(numero);
+        if (m == null) {
+            throw new IllegalArgumentException("La mesa " + numero + " no existe.");
+        }
+        for (Reserva r : ReservaRepositorio.listar()) {
+            boolean vigente = r.isEstadoReserva() && !r.getFechaReserva().isBefore(LocalDate.now());
+            if (vigente && r.incluye(m)) {
+                throw new IllegalArgumentException(
+                        "La mesa " + numero + " tiene reservas pendientes y no se puede eliminar.");
+            }
+        }
+        MesaRepositorio.eliminar(m);
+    }
+
+    public List<MesaDisponibilidad> mesasParaReserva(String ubicacion, int personas,
+            LocalDate fecha, LocalTime inicio, LocalTime fin) {
+
+        List<MesaDisponibilidad> resultado = new ArrayList<>();
+        for (Mesa m : MesaRepositorio.listarMesas()) {
+            boolean mismaUbicacion = m.getUbicacion().getNombreUbicacion().equalsIgnoreCase(ubicacion);
+            if (mismaUbicacion && m.getCapacidad() >= personas) {
+                resultado.add(new MesaDisponibilidad(m, estadoDe(m, fecha, inicio, fin)));
+            }
+        }
+        resultado.sort(Comparator.comparingInt(d -> d.getMesa().getNumeroMesa()));
+        return resultado;
+    }
+
+    public EstadoMesa estadoDe(Mesa mesa, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        if (!mesa.isEstado()) return EstadoMesa.INACTIVA;
+        return estaOcupada(mesa, fecha, inicio, fin) ? EstadoMesa.RESERVADA : EstadoMesa.DISPONIBLE;
+    }
+
+    public boolean estaOcupada(Mesa mesa, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        for (Reserva r : ReservaRepositorio.listar()) {
+            if (r.seCruzaCon(fecha, inicio, fin) && r.incluye(mesa)) return true;
+        }
+        return false;
+    }
+
+    public static class MesaDisponibilidad {
+        private final Mesa mesa;
+        private final EstadoMesa estado;
+
+        public MesaDisponibilidad(Mesa mesa, EstadoMesa estado) {
+            this.mesa = mesa;
+            this.estado = estado;
+        }
+
+        public Mesa getMesa() { return mesa; }
+        public EstadoMesa getEstado() { return estado; }
+    }
 }

@@ -8,54 +8,33 @@ package modelo;
  *
  * @author Diego
  */
-public class mesa {
+public class Mesa {
 
-   private int idMesa;
+    private int idMesa;
     private int numeroMesa;
     private int capacidad;
     private boolean estado;
     private Ubicacion ubicacion;
 
-    public mesa(
-            int idMesa,
-            int numeroMesa,
-            int capacidad,
-            Ubicacion ubicacion) {
+    public Mesa(int idMesa, int numeroMesa, int capacidad, Ubicacion ubicacion) {
+        this(idMesa, numeroMesa, capacidad, true, ubicacion);
+    }
 
+    public Mesa(int idMesa, int numeroMesa, int capacidad, boolean estado, Ubicacion ubicacion) {
         this.idMesa = idMesa;
         this.numeroMesa = numeroMesa;
         this.capacidad = capacidad;
-        this.estado = true;
+        this.estado = estado;
         this.ubicacion = ubicacion;
     }
 
-    public int getIdMesa() {
-        return idMesa;
-    }
+    public int getIdMesa() { return idMesa; }
+    public int getNumeroMesa() { return numeroMesa; }
+    public int getCapacidad() { return capacidad; }
+    public boolean isEstado() { return estado; }
+    public Ubicacion getUbicacion() { return ubicacion; }
 
-    public int getNumeroMesa() {
-        return numeroMesa;
-    }
-
-    public int getCapacidad() {
-        return capacidad;
-    }
-
-    public boolean isEstado() {
-        return estado;
-    }
-
-    public Ubicacion getUbicacion() {
-        return ubicacion;
-    }
-
-    public void cambiarEstado(boolean estado) {
-        this.estado = estado;
-    }
-
-    public boolean estaDisponible() {
-        return estado;
-    }
-   
+    public void cambiarEstado(boolean estado) { this.estado = estado; }
+    public boolean estaDisponible() { return estado; }
 }
 
