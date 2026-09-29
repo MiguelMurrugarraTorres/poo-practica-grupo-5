@@ -8,6 +8,10 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import excepciones.DatosInvalidosException;
+import excepciones.MesaConReservaException;
+import excepciones.MesaNoEncontradaException;
+import excepciones.MesaYaExistenteException;
 import modelo.EstadoMesa;
 import modelo.Mesa;
 import modelo.Reserva;
@@ -17,9 +21,10 @@ import repositorio.ReservaRepositorio;
 
 public class MesaService {
 
-    public void registrarMesa(Mesa mesa) {
+   
+    public void registrarMesa(Mesa mesa) throws MesaYaExistenteException {
         if (buscarMesa(mesa.getNumeroMesa()) != null) {
-            throw new IllegalArgumentException("Ya existe la mesa " + mesa.getNumeroMesa() + ".");
+            throw new MesaYaExistenteException("Ya existe la mesa " + mesa.getNumeroMesa() + ".");
         }
         MesaRepositorio.guardar(mesa);
     }
@@ -44,28 +49,29 @@ public class MesaService {
         return MesaRepositorio.listarUbicaciones();
     }
 
-    public Mesa registrarMesa(int numero, int capacidad, String nombreUbicacion, boolean activa) {
+    public Mesa registrarMesa(int numero, int capacidad, String nombreUbicacion, boolean activa)
+            throws DatosInvalidosException, MesaYaExistenteException {
         if (numero <= 0 || capacidad <= 0) {
-            throw new IllegalArgumentException("El número y la capacidad deben ser mayores a 0.");
+            throw new DatosInvalidosException("El número y la capacidad deben ser mayores a 0.");
         }
         Ubicacion u = MesaRepositorio.buscarUbicacion(nombreUbicacion);
         if (u == null) {
-            throw new IllegalArgumentException("La ubicación no existe.");
+            throw new DatosInvalidosException("La ubicación no existe.");
         }
         Mesa m = new Mesa(MesaRepositorio.siguienteId(), numero, capacidad, activa, u);
         registrarMesa(m);
         return m;
     }
 
-    public void eliminarMesa(int numero) {
+    public void eliminarMesa(int numero) throws MesaNoEncontradaException, MesaConReservaException {
         Mesa m = buscarMesa(numero);
         if (m == null) {
-            throw new IllegalArgumentException("La mesa " + numero + " no existe.");
+            throw new MesaNoEncontradaException("La mesa " + numero + " no existe.");
         }
         for (Reserva r : ReservaRepositorio.listar()) {
             boolean vigente = r.isEstadoReserva() && !r.getFechaReserva().isBefore(LocalDate.now());
             if (vigente && r.incluye(m)) {
-                throw new IllegalArgumentException(
+                throw new MesaConReservaException(
                         "La mesa " + numero + " tiene reservas pendientes y no se puede eliminar.");
             }
         }

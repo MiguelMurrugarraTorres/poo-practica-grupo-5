@@ -5,12 +5,16 @@
 package gui;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import modelo.Trabajador;
+import servicio.Sesion;
 /**
  *
  * @author Diego
  */
 public class MenuEmpleado extends JFrame{
-private static final java.util.logging.Logger logger =
+ private static final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(MenuEmpleado.class.getName());
 
     public MenuEmpleado() {
@@ -19,7 +23,11 @@ private static final java.util.logging.Logger logger =
 
     private void initComponents() {
         setTitle("Seleccionar Opción");
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) { intentarCerrarPrograma(); }
+        });
         setSize(650, 650);
         setLocationRelativeTo(null);
         setLayout(null);
@@ -33,6 +41,7 @@ private static final java.util.logging.Logger logger =
         add(lblTitulo);
 
         add(crearTarjeta(60, 100, 240, 220, "Registrar Horario de Salida", "/img/cerrar-sesion.png", () -> {
+            new MenuHorarioSalida().setVisible(true);
             dispose();
         }));
 
@@ -43,13 +52,25 @@ private static final java.util.logging.Logger logger =
 
         add(crearTarjeta(60, 350, 240, 220, "Registrar Mesa", "/img/mesa.png", () -> {
             new MenuRegistrarMesa().setVisible(true);
-        dispose();
+            dispose();
         }));
 
         add(crearTarjeta(340, 350, 240, 220, "Eliminar Mesa", "/img/claro.png", () -> {
-              new MenuEliminarMesa().setVisible(true);
+            new MenuEliminarMesa().setVisible(true);
             dispose();
         }));
+    }
+
+    /** Al cerrar el programa desde el menú principal, avisa si falta registrar la salida. */
+    private void intentarCerrarPrograma() {
+        Trabajador t = Sesion.getTrabajador();
+        if (t != null && !t.tieneSalidaRegistrada()) {
+            int r = JOptionPane.showConfirmDialog(this,
+                    "Todavía no has registrado tu horario de salida.\n¿Deseas cerrar el programa de todas formas?",
+                    "Salida no registrada", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (r != JOptionPane.YES_OPTION) return;
+        }
+        System.exit(0);
     }
 
     private JLayeredPane crearTarjeta(int x, int y, int ancho, int alto,
@@ -71,15 +92,15 @@ private static final java.util.logging.Logger logger =
         lblTitulo.setBorder(BorderFactory.createEmptyBorder(8, 6, 8, 6));
 
         JLabel lblImagen = new JLabel();
-            lblImagen.setHorizontalAlignment(SwingConstants.CENTER);
-            lblImagen.setVerticalAlignment(SwingConstants.CENTER);
+        lblImagen.setHorizontalAlignment(SwingConstants.CENTER);
+        lblImagen.setVerticalAlignment(SwingConstants.CENTER);
 
         ImageIcon icono = cargarIconoEscalado(rutaImagen, 90, 90);
-            if (icono != null) {
-                lblImagen.setIcon(icono);
-            } else {
-                logger.warning("No se encontró la imagen: " + rutaImagen);
-            }
+        if (icono != null) {
+            lblImagen.setIcon(icono);
+        } else {
+            logger.warning("No se encontró la imagen: " + rutaImagen);
+        }
 
         panel.add(lblTitulo, BorderLayout.NORTH);
         panel.add(lblImagen, BorderLayout.CENTER);
@@ -101,9 +122,7 @@ private static final java.util.logging.Logger logger =
 
     private ImageIcon cargarIconoEscalado(String ruta, int ancho, int alto) {
         java.net.URL url = getClass().getResource(ruta);
-        if (url == null) {
-            return null;
-        }
+        if (url == null) return null;
         ImageIcon original = new ImageIcon(url);
         Image escalada = original.getImage().getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
         return new ImageIcon(escalada);
@@ -120,7 +139,6 @@ private static final java.util.logging.Logger logger =
         } catch (ReflectiveOperationException | UnsupportedLookAndFeelException ex) {
             logger.log(java.util.logging.Level.SEVERE, null, ex);
         }
-
         EventQueue.invokeLater(() -> new MenuEmpleado().setVisible(true));
     }
 }

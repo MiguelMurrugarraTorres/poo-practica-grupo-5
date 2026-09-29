@@ -8,11 +8,40 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import javax.swing.*;
 
 public class Selectores {
+
+     /** Horario de atención del restaurante. */
+    public static final LocalTime APERTURA = LocalTime.of(8, 0);
+    public static final LocalTime CIERRE   = LocalTime.of(22, 0);
+
+    private static final DateTimeFormatter FMT_HORA = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Redondea hacia arriba al siguiente múltiplo de 15 minutos (08:07 → 08:15). */
+    public static LocalTime redondearArriba(LocalTime t) {
+        if (t.getHour() == 23 && t.getMinute() > 45) {
+            // Pasaría de medianoche: lo tratamos como fuera del horario de hoy.
+            return CIERRE.plusMinutes(15);
+        }
+        int resto = t.getMinute() % 15;
+        if (resto == 0 && t.getSecond() == 0 && t.getNano() == 0) {
+            return t.withSecond(0).withNano(0);
+        }
+        return t.withSecond(0).withNano(0).plusMinutes(15 - resto);
+    }
+
+    /** Ajusta un valor para que quede dentro del horario de atención. */
+    public static LocalTime limitarHorarioAtencion(LocalTime t) {
+        if (t.isBefore(APERTURA)) return APERTURA;
+        if (t.isAfter(CIERRE)) return CIERRE;
+        return t;
+    }
 
     /** Muestra un calendario. Devuelve la fecha elegida o null si se cancela. */
     public static LocalDate elegirFecha(Window padre, LocalDate inicial) {
@@ -80,28 +109,74 @@ public class Selectores {
         return resultado[0];
     }
 
-    /** Muestra un selector de hora (HH:mm). Devuelve la hora o null si se cancela. */
-    public static LocalTime elegirHora(Window padre, String titulo, LocalTime inicial) {
+    /**
+     * Muestra una lista de horarios válidos, cada 15 minutos, entre el máximo de
+     * (minimo, apertura) y el cierre. Devuelve la hora elegida o null si se cancela
+     * o si ya no hay horarios disponibles.
+     *
+     * @param minimo hora más temprana permitida (por ejemplo, la hora actual, o la
+     *               hora de inicio de la reserva cuando se elige la hora de fin).
+     *               Puede ser null si no hay una hora mínima aparte de la apertura.
+     */
+    public static LocalTime elegirHora(Window padre, String titulo, LocalTime sugerida, LocalTime minimo) {
+        LocalTime limiteInferior = APERTURA;
+        if (minimo != null) {
+            LocalTime m = redondearArriba(minimo);
+            if (m.isAfter(limiteInferior)) limiteInferior = m;
+        }
+
+        if (limiteInferior.isAfter(CIERRE)) {
+            JOptionPane.showMessageDialog(padre,
+                    "No hay horarios disponibles dentro del horario de atención ("
+                            + APERTURA.format(FMT_HORA) + " a " + CIERRE.format(FMT_HORA) + ").",
+                    "Fuera de horario", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+
+        List<LocalTime> opciones = new ArrayList<>();
+        for (LocalTime t = limiteInferior; !t.isAfter(CIERRE); t = t.plusMinutes(15)) {
+            opciones.add(t);
+        }
+
+        LocalTime preseleccion = limiteInferior;
+        if (sugerida != null) {
+            LocalTime candidata = redondearArriba(sugerida);
+            if (!candidata.isBefore(limiteInferior) && !candidata.isAfter(CIERRE)) {
+                preseleccion = candidata;
+            }
+        }
+
         final LocalTime[] resultado = {null};
 
         JDialog d = new JDialog(padre, titulo, Dialog.ModalityType.APPLICATION_MODAL);
         d.setLayout(new BorderLayout(0, 12));
-        ((JComponent) d.getContentPane()).setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        ((JComponent) d.getContentPane()).setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
         d.getContentPane().setBackground(EstiloUI.FONDO);
 
-        JSpinner sH = new JSpinner(new SpinnerNumberModel(inicial.getHour(), 0, 23, 1));
-        JSpinner sM = new JSpinner(new SpinnerNumberModel(inicial.getMinute(), 0, 59, 1));
-        estiloSpinner(sH);
-        estiloSpinner(sM);
+        JLabel lblInfo = new JLabel(
+                "Horario de atención: " + APERTURA.format(FMT_HORA) + " a " + CIERRE.format(FMT_HORA),
+                SwingConstants.CENTER);
+        lblInfo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblInfo.setForeground(new Color(90, 90, 90));
 
-        JLabel dosPuntos = new JLabel(":");
-        dosPuntos.setFont(new Font("Segoe UI", Font.BOLD, 34));
+        JComboBox<LocalTime> combo = new JComboBox<>(opciones.toArray(new LocalTime[0]));
+        combo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        combo.setSelectedItem(preseleccion);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setHorizontalAlignment(CENTER);
+                if (value instanceof LocalTime) setText(((LocalTime) value).format(FMT_HORA));
+                return this;
+            }
+        });
 
-        JPanel reloj = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
-        reloj.setOpaque(false);
-        reloj.add(sH);
-        reloj.add(dosPuntos);
-        reloj.add(sM);
+        JPanel centro = new JPanel(new BorderLayout(0, 8));
+        centro.setOpaque(false);
+        centro.add(lblInfo, BorderLayout.NORTH);
+        centro.add(combo, BorderLayout.CENTER);
 
         EstiloUI.BotonRedondo cancelar = new EstiloUI.BotonRedondo("Cancelar", EstiloUI.ROJO, EstiloUI.ROJO_HOVER);
         EstiloUI.BotonRedondo aceptar = new EstiloUI.BotonRedondo("Aceptar", EstiloUI.LILA, EstiloUI.LILA_HOVER);
@@ -109,7 +184,7 @@ public class Selectores {
         aceptar.setPreferredSize(new Dimension(110, 30));
         cancelar.addActionListener(e -> d.dispose());
         aceptar.addActionListener(e -> {
-            resultado[0] = LocalTime.of((Integer) sH.getValue(), (Integer) sM.getValue());
+            resultado[0] = (LocalTime) combo.getSelectedItem();
             d.dispose();
         });
 
@@ -118,21 +193,13 @@ public class Selectores {
         botones.add(cancelar);
         botones.add(aceptar);
 
-        d.add(reloj, BorderLayout.CENTER);
+        d.add(centro, BorderLayout.CENTER);
         d.add(botones, BorderLayout.SOUTH);
         d.getRootPane().setDefaultButton(aceptar);
-        d.pack();
+        d.setSize(300, 190);
         d.setResizable(false);
         d.setLocationRelativeTo(padre);
         d.setVisible(true);
         return resultado[0];
-    }
-
-    private static void estiloSpinner(JSpinner s) {
-        s.setEditor(new JSpinner.NumberEditor(s, "00"));
-        JFormattedTextField tf = ((JSpinner.DefaultEditor) s.getEditor()).getTextField();
-        tf.setFont(new Font("Segoe UI", Font.BOLD, 34));
-        tf.setHorizontalAlignment(SwingConstants.CENTER);
-        tf.setColumns(2);
     }
 }

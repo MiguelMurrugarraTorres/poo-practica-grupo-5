@@ -18,7 +18,9 @@ import modelo.Mesa;
 import modelo.Ubicacion;
 import servicio.MesaService;
 import servicio.MesaService.MesaDisponibilidad;
+
 public class MenuSeleccionarMesa extends JDialog  {
+    
 public static final int DIAMETRO = 48;
     private static final int PW = 849, PH = 353;
     private static final MesaService servicio = new MesaService();
@@ -89,6 +91,8 @@ public static final int DIAMETRO = 48;
         info.setFont(new Font("Segoe UI", Font.ITALIC, 14));
         info.setBounds(500, 505, 210, 26);
         add(info);
+        
+       
 
         EstiloUI.BotonRedondo btnRetro = new EstiloUI.BotonRedondo("Retroceder", EstiloUI.ROJO, EstiloUI.ROJO_HOVER);
         btnRetro.setBounds(724, 505, 125, 28);

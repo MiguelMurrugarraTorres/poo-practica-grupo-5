@@ -25,4 +25,12 @@ public class ClienteRepositorio {
         }
         return null;
     }
+
+    public static int siguienteId() {
+        int max = 0;
+        for (Cliente c : CLIENTES) max = Math.max(max, c.getIdSocio());
+        return max + 1;
+    }
+
+    public static void guardar(Cliente cliente) { CLIENTES.add(cliente); }
 }

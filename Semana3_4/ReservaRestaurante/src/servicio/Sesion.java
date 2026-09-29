@@ -3,12 +3,19 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package servicio;
-
+import modelo.Trabajador;
 public class Sesion {
 
-    private static int idTrabajador = 1;
 
-    public static int getIdTrabajador() { return idTrabajador; }
+    private static Trabajador trabajador;
 
-    public static void iniciar(int id) { idTrabajador = id; }
+    public static void iniciar(Trabajador t) { trabajador = t; }
+
+    public static Trabajador getTrabajador() { return trabajador; }
+
+    public static int getIdTrabajador() {
+        return trabajador != null ? trabajador.getIdTrabajador() : 0;
+    }
+
+    public static void cerrar() { trabajador = null; }
 }

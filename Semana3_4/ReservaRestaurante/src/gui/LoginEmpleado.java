@@ -4,10 +4,13 @@
  */
 package gui;
 
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import excepciones.CredencialesInvalidasException;
+import modelo.Trabajador;
+import servicio.Sesion;
+import servicio.TrabajadorServicio;
 
 public class LoginEmpleado extends JFrame  {
  private static final Color FONDO       = new Color(217, 217, 217);
@@ -17,13 +20,17 @@ public class LoginEmpleado extends JFrame  {
     private static final Color BOTON       = new Color(160, 170, 205);
     private static final Color BOTON_HOVER = new Color(140, 152, 195);
 
+    private final TrabajadorServicio trabajadorServicio = new TrabajadorServicio();
+
+    //diego@restaurante.com --1234
+      //carla@restaurante.com --abcd
+    
     private CampoTexto txtCorreo;
     private CampoClave txtClave;
     private JLabel lblError;
 
     public LoginEmpleado() {
         initComponents();
-        
     }
 
     private void initComponents() {
@@ -35,20 +42,17 @@ public class LoginEmpleado extends JFrame  {
         setLayout(null);
         getContentPane().setBackground(FONDO);
 
-        // ---------- Barra gris superior ----------
         JPanel barra = new JPanel();
         barra.setBackground(BARRA);
         barra.setBounds(0, 0, 460, 28);
         add(barra);
 
-        // ---------- Título ----------
         JLabel lblTitulo = new JLabel("Iniciar Sesión", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Segoe UI", Font.PLAIN, 34));
         lblTitulo.setForeground(new Color(30, 30, 30));
         lblTitulo.setBounds(0, 45, 460, 50);
         add(lblTitulo);
 
-        // ---------- Correo ----------
         JLabel lblCorreo = new JLabel("Correo :");
         lblCorreo.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         lblCorreo.setBounds(45, 120, 200, 24);
@@ -58,7 +62,6 @@ public class LoginEmpleado extends JFrame  {
         txtCorreo.setBounds(45, 148, 370, 38);
         add(txtCorreo);
 
-        // ---------- Contraseña ----------
         JLabel lblClave = new JLabel("Contraseña :");
         lblClave.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         lblClave.setBounds(45, 210, 200, 24);
@@ -68,20 +71,17 @@ public class LoginEmpleado extends JFrame  {
         txtClave.setBounds(45, 238, 370, 38);
         add(txtClave);
 
-        // ---------- Mensaje de error (oculto hasta que haga falta) ----------
         lblError = new JLabel("", SwingConstants.CENTER);
         lblError.setForeground(new Color(190, 40, 40));
         lblError.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblError.setBounds(45, 292, 370, 20);
         add(lblError);
 
-        // ---------- Botón Iniciar ----------
         BotonRedondo btnIniciar = new BotonRedondo("Iniciar");
         btnIniciar.setBounds(115, 350, 230, 42);
         btnIniciar.addActionListener(e -> iniciarSesion());
         add(btnIniciar);
 
-        // Enter en cualquier campo también inicia sesión
         getRootPane().setDefaultButton(btnIniciar);
     }
 
@@ -89,19 +89,14 @@ public class LoginEmpleado extends JFrame  {
         String correo = txtCorreo.getText().trim();
         String clave = new String(txtClave.getPassword());
 
-        if (correo.isEmpty() || clave.isEmpty()) {
-            lblError.setText("Completa el correo y la contraseña");
-            return;
-        }
-
-        // TODO: aquí valida con tu base de datos / clase Trabajador.iniciarSesion()
-        boolean valido = true;
-
-        if (valido) {
+        try {
+            Trabajador t = trabajadorServicio.iniciarSesion(correo, clave);
+            Sesion.iniciar(t);
+            lblError.setText("");
             new MenuEmpleado().setVisible(true);
             dispose();
-        } else {
-            lblError.setText("Correo o contraseña incorrectos");
+        } catch (CredencialesInvalidasException ex) {
+            lblError.setText(ex.getMessage());
         }
     }
 
@@ -180,7 +175,7 @@ public class LoginEmpleado extends JFrame  {
         @Override
         protected void paintComponent(Graphics g) {
             pintarPildora(g, this, sobre ? BOTON_HOVER : BOTON);
-            super.paintComponent(g); // dibuja el texto
+            super.paintComponent(g);
         }
     }
 

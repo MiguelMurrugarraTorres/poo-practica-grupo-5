@@ -4,8 +4,12 @@
  */
 package servicio;
 
+
 import java.time.LocalDate;
 import java.time.LocalTime;
+import excepciones.ClienteNoEncontradoException;
+import excepciones.DatosInvalidosException;
+import excepciones.MesaNoDisponibleException;
 import modelo.Cliente;
 import modelo.EstadoMesa;
 import modelo.Mesa;
@@ -15,33 +19,47 @@ import repositorio.ReservaRepositorio;
 
 public class ReservaServicio {
 
+    private static final LocalTime APERTURA = LocalTime.of(8, 0);
+    private static final LocalTime CIERRE   = LocalTime.of(22, 0);
+
     private final MesaService mesaService = new MesaService();
 
     public Reserva registrar(String dni, LocalDate fecha, LocalTime inicio, LocalTime fin,
-            int personas, String observacion, Mesa mesa, int idTrabajador) {
+            int personas, String observacion, Mesa mesa, int idTrabajador)
+            throws ClienteNoEncontradoException, DatosInvalidosException, MesaNoDisponibleException {
 
         Cliente cliente = ClienteRepositorio.buscarPorDni(dni);
         if (cliente == null) {
-            throw new IllegalArgumentException("No existe un cliente con el DNI " + dni + ".");
+            throw new ClienteNoEncontradoException("No existe un cliente con el DNI " + dni + ".");
         }
         if (fecha.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("La fecha no puede ser anterior a hoy.");
+            throw new DatosInvalidosException("La fecha no puede ser anterior a hoy.");
+        }
+        if (fecha.equals(LocalDate.now()) && inicio.isBefore(LocalTime.now())) {
+            throw new DatosInvalidosException("La hora de inicio no puede ser anterior a la hora actual.");
+        }
+        if (inicio.isBefore(APERTURA) || inicio.isAfter(CIERRE)) {
+            throw new DatosInvalidosException(
+                    "El horario de atención es de " + APERTURA + " a " + CIERRE + ".");
+        }
+        if (fin.isAfter(CIERRE)) {
+            throw new DatosInvalidosException("La hora de fin no puede pasar de las " + CIERRE + " (cierre del local).");
         }
         if (!fin.isAfter(inicio)) {
-            throw new IllegalArgumentException("La hora de fin debe ser posterior a la de inicio.");
+            throw new DatosInvalidosException("La hora de fin debe ser posterior a la de inicio.");
         }
         if (personas <= 0) {
-            throw new IllegalArgumentException("La cantidad de personas debe ser mayor a 0.");
+            throw new DatosInvalidosException("La cantidad de personas debe ser mayor a 0.");
         }
         if (mesa == null) {
-            throw new IllegalArgumentException("Selecciona una mesa.");
+            throw new DatosInvalidosException("Selecciona una mesa.");
         }
         if (personas > mesa.getCapacidad()) {
-            throw new IllegalArgumentException("La mesa " + mesa.getNumeroMesa()
+            throw new DatosInvalidosException("La mesa " + mesa.getNumeroMesa()
                     + " solo tiene capacidad para " + mesa.getCapacidad() + " personas.");
         }
         if (mesaService.estadoDe(mesa, fecha, inicio, fin) != EstadoMesa.DISPONIBLE) {
-            throw new IllegalArgumentException("La mesa " + mesa.getNumeroMesa()
+            throw new MesaNoDisponibleException("La mesa " + mesa.getNumeroMesa()
                     + " ya no está disponible en ese horario.");
         }
 

@@ -9,7 +9,7 @@ import java.awt.event.MouseEvent;
 
 public class EstiloUI {
 
-    public static final Color FONDO       = new Color(217, 217, 217);
+   public static final Color FONDO       = new Color(217, 217, 217);
     public static final Color BARRA       = new Color(122, 122, 122);
     public static final Color GRIS_CAMPO  = new Color(147, 143, 141);
     public static final Color NEGRO       = Color.BLACK;
@@ -18,7 +18,6 @@ public class EstiloUI {
     public static final Color LILA        = new Color(160, 170, 205);
     public static final Color LILA_HOVER  = new Color(140, 152, 195);
 
-    /** Barra gris superior con el título centrado. */
     public static JLabel crearBarra(String titulo, int ancho) {
         JLabel barra = new JLabel(titulo, SwingConstants.CENTER);
         barra.setOpaque(true);
@@ -29,7 +28,6 @@ public class EstiloUI {
         return barra;
     }
 
-    /** Etiqueta a la izquierda de cada campo. */
     public static JLabel etiqueta(String texto, int x, int y) {
         JLabel l = new JLabel(texto);
         l.setFont(new Font("Segoe UI", Font.PLAIN, 18));
@@ -38,7 +36,15 @@ public class EstiloUI {
         return l;
     }
 
-    // ---------------- Campo de texto gris, texto centrado ----------------
+    /** Texto azul subrayado, con cursor de mano, para usar como link dentro de un JFrame/JDialog. */
+    public static JLabel crearEnlace(String texto) {
+        JLabel l = new JLabel("<html><u>" + texto + "</u></html>", SwingConstants.CENTER);
+        l.setForeground(new Color(40, 70, 160));
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        l.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return l;
+    }
+
     public static class CampoGris extends JTextField {
         public CampoGris() {
             setOpaque(true);
@@ -50,7 +56,6 @@ public class EstiloUI {
             setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
         }
 
-        /** true = se ve negro y no se puede editar (como en Eliminar Mesa). */
         public void bloquear(boolean bloqueado) {
             setEditable(!bloqueado);
             setFocusable(!bloqueado);
@@ -58,7 +63,6 @@ public class EstiloUI {
         }
     }
 
-    // ---------------- Combo gris con flecha ----------------
     public static class ComboGris extends JComboBox<String> {
         public ComboGris(String... items) {
             super(items);
@@ -96,12 +100,11 @@ public class EstiloUI {
         public void bloquear(boolean bloqueado) {
             setEnabled(!bloqueado);
             setBackground(bloqueado ? NEGRO : GRIS_CAMPO);
-            setUI(getUI()); // fuerza a repintar la flecha con el nuevo color
+            setUI(getUI());
             repaint();
         }
     }
 
-    // ---------------- Botón con forma de píldora ----------------
     public static class BotonRedondo extends JButton {
         private final Color normal, hover;
         private boolean sobre = false;
