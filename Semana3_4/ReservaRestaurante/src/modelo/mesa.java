@@ -29,6 +29,7 @@ public class Mesa {
     }
 
     public int getIdMesa() { return idMesa; }
+    public void setIdMesa(int idMesa) { this.idMesa = idMesa; }   // ← nuevo: lo usa el repositorio tras el INSERT
     public int getNumeroMesa() { return numeroMesa; }
     public int getCapacidad() { return capacidad; }
     public boolean isEstado() { return estado; }

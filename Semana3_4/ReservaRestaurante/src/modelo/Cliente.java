@@ -15,4 +15,5 @@ public class Cliente extends Persona {
     }
 
     public int getIdSocio() { return idSocio; }
+    public void setIdSocio(int idSocio) { this.idSocio = idSocio; }   
 }

@@ -17,16 +17,13 @@ import javax.swing.*;
 
 public class Selectores {
 
-     /** Horario de atención del restaurante. */
     public static final LocalTime APERTURA = LocalTime.of(8, 0);
     public static final LocalTime CIERRE   = LocalTime.of(22, 0);
 
     private static final DateTimeFormatter FMT_HORA = DateTimeFormatter.ofPattern("HH:mm");
 
-    /** Redondea hacia arriba al siguiente múltiplo de 15 minutos (08:07 → 08:15). */
     public static LocalTime redondearArriba(LocalTime t) {
         if (t.getHour() == 23 && t.getMinute() > 45) {
-            // Pasaría de medianoche: lo tratamos como fuera del horario de hoy.
             return CIERRE.plusMinutes(15);
         }
         int resto = t.getMinute() % 15;
@@ -36,14 +33,12 @@ public class Selectores {
         return t.withSecond(0).withNano(0).plusMinutes(15 - resto);
     }
 
-    /** Ajusta un valor para que quede dentro del horario de atención. */
     public static LocalTime limitarHorarioAtencion(LocalTime t) {
         if (t.isBefore(APERTURA)) return APERTURA;
         if (t.isAfter(CIERRE)) return CIERRE;
         return t;
     }
 
-    /** Muestra un calendario. Devuelve la fecha elegida o null si se cancela. */
     public static LocalDate elegirFecha(Window padre, LocalDate inicial) {
         final LocalDate[] resultado = {null};
         final YearMonth[] mes = {YearMonth.from(inicial)};
@@ -109,15 +104,6 @@ public class Selectores {
         return resultado[0];
     }
 
-    /**
-     * Muestra una lista de horarios válidos, cada 15 minutos, entre el máximo de
-     * (minimo, apertura) y el cierre. Devuelve la hora elegida o null si se cancela
-     * o si ya no hay horarios disponibles.
-     *
-     * @param minimo hora más temprana permitida (por ejemplo, la hora actual, o la
-     *               hora de inicio de la reserva cuando se elige la hora de fin).
-     *               Puede ser null si no hay una hora mínima aparte de la apertura.
-     */
     public static LocalTime elegirHora(Window padre, String titulo, LocalTime sugerida, LocalTime minimo) {
         LocalTime limiteInferior = APERTURA;
         if (minimo != null) {
@@ -149,8 +135,8 @@ public class Selectores {
         final LocalTime[] resultado = {null};
 
         JDialog d = new JDialog(padre, titulo, Dialog.ModalityType.APPLICATION_MODAL);
-        d.setLayout(new BorderLayout(0, 12));
-        ((JComponent) d.getContentPane()).setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+        d.setLayout(new BorderLayout(0, 14));
+        ((JComponent) d.getContentPane()).setBorder(BorderFactory.createEmptyBorder(18, 26, 18, 26));
         d.getContentPane().setBackground(EstiloUI.FONDO);
 
         JLabel lblInfo = new JLabel(
@@ -179,16 +165,16 @@ public class Selectores {
         centro.add(combo, BorderLayout.CENTER);
 
         EstiloUI.BotonRedondo cancelar = new EstiloUI.BotonRedondo("Cancelar", EstiloUI.ROJO, EstiloUI.ROJO_HOVER);
-        EstiloUI.BotonRedondo aceptar = new EstiloUI.BotonRedondo("Aceptar", EstiloUI.LILA, EstiloUI.LILA_HOVER);
-        cancelar.setPreferredSize(new Dimension(110, 30));
-        aceptar.setPreferredSize(new Dimension(110, 30));
+        EstiloUI.BotonRedondo aceptar = new EstiloUI.BotonRedondo("Seleccionar", EstiloUI.LILA, EstiloUI.LILA_HOVER);
+        cancelar.setPreferredSize(new Dimension(110, 32));
+        aceptar.setPreferredSize(new Dimension(130, 32));
         cancelar.addActionListener(e -> d.dispose());
         aceptar.addActionListener(e -> {
             resultado[0] = (LocalTime) combo.getSelectedItem();
             d.dispose();
         });
 
-        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         botones.setOpaque(false);
         botones.add(cancelar);
         botones.add(aceptar);
@@ -196,7 +182,8 @@ public class Selectores {
         d.add(centro, BorderLayout.CENTER);
         d.add(botones, BorderLayout.SOUTH);
         d.getRootPane().setDefaultButton(aceptar);
-        d.setSize(300, 190);
+        d.pack();                       // ← antes era d.setSize(300, 190), cortaba el botón Aceptar
+        d.setMinimumSize(d.getSize());
         d.setResizable(false);
         d.setLocationRelativeTo(padre);
         d.setVisible(true);

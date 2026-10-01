@@ -21,7 +21,6 @@ import repositorio.ReservaRepositorio;
 
 public class MesaService {
 
-   
     public void registrarMesa(Mesa mesa) throws MesaYaExistenteException {
         if (buscarMesa(mesa.getNumeroMesa()) != null) {
             throw new MesaYaExistenteException("Ya existe la mesa " + mesa.getNumeroMesa() + ".");
@@ -50,18 +49,18 @@ public class MesaService {
     }
 
     public Mesa registrarMesa(int numero, int capacidad, String nombreUbicacion, boolean activa)
-            throws DatosInvalidosException, MesaYaExistenteException {
-        if (numero <= 0 || capacidad <= 0) {
-            throw new DatosInvalidosException("El número y la capacidad deben ser mayores a 0.");
-        }
-        Ubicacion u = MesaRepositorio.buscarUbicacion(nombreUbicacion);
-        if (u == null) {
-            throw new DatosInvalidosException("La ubicación no existe.");
-        }
-        Mesa m = new Mesa(MesaRepositorio.siguienteId(), numero, capacidad, activa, u);
-        registrarMesa(m);
-        return m;
+        throws DatosInvalidosException, MesaYaExistenteException {
+    if (numero <= 0 || capacidad <= 0) {
+        throw new DatosInvalidosException("El número y la capacidad deben ser mayores a 0.");
     }
+    Ubicacion u = MesaRepositorio.buscarUbicacion(nombreUbicacion);
+    if (u == null) {
+        throw new DatosInvalidosException("La ubicación no existe.");
+    }
+    Mesa m = new Mesa(0, numero, capacidad, activa, u);   // el id real lo asigna MySQL al guardar
+    registrarMesa(m);
+    return m;
+}
 
     public void eliminarMesa(int numero) throws MesaNoEncontradaException, MesaConReservaException {
         Mesa m = buscarMesa(numero);
@@ -78,13 +77,43 @@ public class MesaService {
         MesaRepositorio.eliminar(m);
     }
 
+    /**
+     * Capacidad exacta que corresponde a "personas", mirando TODAS las mesas
+     * del restaurante (sin importar ubicación): si existe una mesa con
+     * capacidad == personas, se usa esa. Si no existe, se prueba con
+     * personas + 1, luego personas + 2, y así hasta encontrar una capacidad
+     * que sí exista en alguna mesa.
+     *
+     *   1 persona, sin mesas de 1 pero sí de 2  → capacidad 2
+     *   4 personas, con mesas de 4               → capacidad 4 (no sube a 6 u 8)
+     *   5 personas, solo mesas de 4, 6, 8         → capacidad 6
+     */
+    private int capacidadRequerida(int personas) {
+        for (int capacidad = personas; capacidad <= 100; capacidad++) {
+            final int c = capacidad;
+            boolean existe = MesaRepositorio.listarMesas().stream()
+                    .anyMatch(m -> m.getCapacidad() == c);
+            if (existe) return capacidad;
+        }
+        return personas; // no hay ninguna mesa que alcance en todo el sistema
+    }
+
+    /**
+     * Mesas de una ubicación para una reserva de "personas" personas:
+     * solo las que tienen exactamente la capacidad que corresponde a esa
+     * cantidad (calculada sobre todo el restaurante, no solo esa ubicación).
+     * Si esa ubicación no tiene ninguna mesa de esa capacidad exacta, no
+     * muestra ninguna.
+     */
     public List<MesaDisponibilidad> mesasParaReserva(String ubicacion, int personas,
             LocalDate fecha, LocalTime inicio, LocalTime fin) {
+
+        int capacidadRequerida = capacidadRequerida(personas);
 
         List<MesaDisponibilidad> resultado = new ArrayList<>();
         for (Mesa m : MesaRepositorio.listarMesas()) {
             boolean mismaUbicacion = m.getUbicacion().getNombreUbicacion().equalsIgnoreCase(ubicacion);
-            if (mismaUbicacion && m.getCapacidad() >= personas) {
+            if (mismaUbicacion && m.getCapacidad() == capacidadRequerida) {
                 resultado.add(new MesaDisponibilidad(m, estadoDe(m, fecha, inicio, fin)));
             }
         }

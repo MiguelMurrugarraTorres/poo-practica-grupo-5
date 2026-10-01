@@ -3,60 +3,137 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package repositorio;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import Conexion.Conexion;
+import excepciones.ErrorBaseDatosException;
 import modelo.Mesa;
 import modelo.Ubicacion;
 
 public class MesaRepositorio {
 
-    private static final List<Ubicacion> UBICACIONES = new ArrayList<>();
-    private static final List<Mesa> MESAS = new ArrayList<>();
+    public static List<Ubicacion> listarUbicaciones() {
+        String sql = "SELECT * FROM ubicacion ORDER BY id_ubicacion";
+        List<Ubicacion> resultado = new ArrayList<>();
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) resultado.add(mapearUbicacion(rs));
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudieron cargar las ubicaciones.", e);
+        }
+        return resultado;
+    }
 
-    static {
-        UBICACIONES.add(new Ubicacion(1, "Sala", false));
-        UBICACIONES.add(new Ubicacion(2, "Terraza", true));
-        UBICACIONES.add(new Ubicacion(3, "Campo", true));
-        UBICACIONES.add(new Ubicacion(4, "Afuera", true));
-
-        // {numero, capacidad, ubicación (1-4), activa (1 = sí, 0 = no)}
-        int[][] datos = {
-            {1, 4, 1, 1}, {2, 2, 1, 1}, {3, 6, 1, 1}, {4, 4, 1, 1}, {5, 4, 1, 1},
-            {6, 4, 1, 0}, {7, 4, 1, 1}, {8, 8, 1, 1}, {9, 4, 1, 1}, {10, 4, 1, 1},
-            {11, 6, 1, 1},
-            {12, 4, 2, 1}, {13, 4, 2, 1}, {14, 2, 2, 1}, {15, 6, 2, 0},
-            {16, 8, 3, 1}, {17, 4, 3, 1}, {18, 4, 3, 1},
-            {19, 2, 4, 1}, {20, 4, 4, 1}
-        };
-        for (int[] d : datos) {
-            MESAS.add(new Mesa(d[0], d[0], d[1], d[3] == 1, UBICACIONES.get(d[2] - 1)));
+    public static Ubicacion buscarUbicacion(String nombre) {
+        String sql = "SELECT * FROM ubicacion WHERE nombre_ubicacion = ?";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nombre);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapearUbicacion(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo buscar la ubicación.", e);
         }
     }
 
-    public static List<Ubicacion> listarUbicaciones() { return new ArrayList<>(UBICACIONES); }
-    public static List<Mesa> listarMesas() { return new ArrayList<>(MESAS); }
-
-    public static Ubicacion buscarUbicacion(String nombre) {
-        for (Ubicacion u : UBICACIONES) {
-            if (u.getNombreUbicacion().equalsIgnoreCase(nombre)) return u;
+    public static List<Mesa> listarMesas() {
+        String sql = "SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, "
+                   + "u.id_ubicacion, u.nombre_ubicacion, u.acepta_mascotas "
+                   + "FROM mesa m JOIN ubicacion u ON m.id_ubicacion = u.id_ubicacion "
+                   + "ORDER BY m.numero_mesa";
+        List<Mesa> resultado = new ArrayList<>();
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) resultado.add(mapearMesa(rs));
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudieron cargar las mesas.", e);
         }
-        return null;
+        return resultado;
     }
 
     public static Mesa buscarPorNumero(int numero) {
-        for (Mesa m : MESAS) {
-            if (m.getNumeroMesa() == numero) return m;
+        String sql = "SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, "
+                   + "u.id_ubicacion, u.nombre_ubicacion, u.acepta_mascotas "
+                   + "FROM mesa m JOIN ubicacion u ON m.id_ubicacion = u.id_ubicacion "
+                   + "WHERE m.numero_mesa = ?";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, numero);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapearMesa(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo buscar la mesa.", e);
         }
-        return null;
     }
 
-    public static int siguienteId() {
-        int max = 0;
-        for (Mesa m : MESAS) max = Math.max(max, m.getIdMesa());
-        return max + 1;
+    public static Mesa buscarPorId(int idMesa) {
+        String sql = "SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, "
+                   + "u.id_ubicacion, u.nombre_ubicacion, u.acepta_mascotas "
+                   + "FROM mesa m JOIN ubicacion u ON m.id_ubicacion = u.id_ubicacion "
+                   + "WHERE m.id_mesa = ?";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idMesa);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapearMesa(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo buscar la mesa.", e);
+        }
     }
 
-    public static void guardar(Mesa mesa) { MESAS.add(mesa); }
+    /** Inserta la mesa y deja el id real (generado por MySQL) escrito en el propio objeto. */
+    public static void guardar(Mesa mesa) {
+        String sql = "INSERT INTO mesa (numero_mesa, capacidad, estado, id_ubicacion) VALUES (?, ?, ?, ?)";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, mesa.getNumeroMesa());
+            ps.setInt(2, mesa.getCapacidad());
+            ps.setBoolean(3, mesa.isEstado());
+            ps.setInt(4, mesa.getUbicacion().getIdUbicacion());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) mesa.setIdMesa(keys.getInt(1));
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo registrar la mesa.", e);
+        }
+    }
 
-    public static void eliminar(Mesa mesa) { MESAS.remove(mesa); }
+    public static void eliminar(Mesa mesa) {
+        String sql = "DELETE FROM mesa WHERE id_mesa = ?";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, mesa.getIdMesa());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo eliminar la mesa.", e);
+        }
+    }
+
+    private static Ubicacion mapearUbicacion(ResultSet rs) throws SQLException {
+        return new Ubicacion(
+                rs.getInt("id_ubicacion"),
+                rs.getString("nombre_ubicacion"),
+                rs.getBoolean("acepta_mascotas"));
+    }
+
+    private static Mesa mapearMesa(ResultSet rs) throws SQLException {
+        Ubicacion u = mapearUbicacion(rs);
+        return new Mesa(
+                rs.getInt("id_mesa"),
+                rs.getInt("numero_mesa"),
+                rs.getInt("capacidad"),
+                rs.getBoolean("estado"),
+                u);
+    }
 }

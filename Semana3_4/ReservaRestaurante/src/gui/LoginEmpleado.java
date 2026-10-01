@@ -22,8 +22,7 @@ public class LoginEmpleado extends JFrame  {
 
     private final TrabajadorServicio trabajadorServicio = new TrabajadorServicio();
 
-    //diego@restaurante.com --1234
-      //carla@restaurante.com --abcd
+   
     
     private CampoTexto txtCorreo;
     private CampoClave txtClave;

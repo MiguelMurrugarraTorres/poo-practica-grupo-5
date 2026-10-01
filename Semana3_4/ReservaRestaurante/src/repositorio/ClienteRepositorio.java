@@ -5,32 +5,55 @@
 package repositorio;
 
 
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import Conexion.Conexion;
+import excepciones.ErrorBaseDatosException;
 import modelo.Cliente;
 
 public class ClienteRepositorio {
 
-    private static final List<Cliente> CLIENTES = new ArrayList<>();
-
-    static {
-        CLIENTES.add(new Cliente(1, "12345678", "Ana", "Torres", "999111222", "ana@mail.com"));
-        CLIENTES.add(new Cliente(2, "87654321", "Luis", "Ramos", "999333444", "luis@mail.com"));
-        CLIENTES.add(new Cliente(3, "45678912", "Rosa", "Quispe", "999555666", "rosa@mail.com"));
-    }
-
     public static Cliente buscarPorDni(String dni) {
-        for (Cliente c : CLIENTES) {
-            if (c.getDni().equals(dni)) return c;
+        String sql = "SELECT * FROM cliente WHERE dni = ?";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, dni);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapear(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo buscar el cliente.", e);
         }
-        return null;
     }
 
-    public static int siguienteId() {
-        int max = 0;
-        for (Cliente c : CLIENTES) max = Math.max(max, c.getIdSocio());
-        return max + 1;
+    public static void guardar(Cliente cliente) {
+        String sql = "INSERT INTO cliente (dni, nombres, apellidos, telefono, correo) VALUES (?, ?, ?, ?, ?)";
+        try (Connection con = Conexion.obtener();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, cliente.getDni());
+            ps.setString(2, cliente.getNombres());
+            ps.setString(3, cliente.getApellidos());
+            ps.setString(4, cliente.getTelefono());
+            ps.setString(5, cliente.getCorreo());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) cliente.setIdSocio(keys.getInt(1));
+            }
+        } catch (SQLException e) {
+            throw new ErrorBaseDatosException("No se pudo registrar el cliente.", e);
+        }
     }
 
-    public static void guardar(Cliente cliente) { CLIENTES.add(cliente); }
+    private static Cliente mapear(ResultSet rs) throws SQLException {
+        return new Cliente(
+                rs.getInt("id_socio"),
+                rs.getString("dni"),
+                rs.getString("nombres"),
+                rs.getString("apellidos"),
+                rs.getString("telefono"),
+                rs.getString("correo"));
+    }
 }
